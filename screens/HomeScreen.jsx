@@ -6,6 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  Button,
 } from "react-native";
 import React, { useLayoutEffect, useState } from "react";
 import { useSelector } from "react-redux";
@@ -19,6 +22,9 @@ const HomeScreen = () => {
   const user = useSelector((state) => state.user.user);
   const [isLoading, setIsLoading] = useState(true);
   const [chats, setChats] = useState(null);
+  const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [password, setPassword] = useState();
   const navigation = useNavigation();
 
   useLayoutEffect(() => {
@@ -35,6 +41,28 @@ const HomeScreen = () => {
     // Return the unsubcribe funciton to stop listening to the updates
     return unsubscribe;
   }, []);
+
+  const openPasswordModal = (room) => {
+    setSelectedRoom(room);
+    setIsPasswordModalVisible(true);
+  };
+
+  const closePasswordModal = () => {
+    setIsPasswordModalVisible(false);
+    setSelectedRoom(null);
+    setPassword("");
+  };
+
+  const handleJoinChat = () => {
+    if (selectedRoom) {
+      if (!selectedRoom.password || selectedRoom.password === password) {
+        navigation.navigate("ChatScreen", { room: selectedRoom });
+        closePasswordModal();
+      } else {
+        alert("Incorrect password");
+      }
+    }
+  };
 
   return (
     <View className="flex-1">
@@ -77,7 +105,11 @@ const HomeScreen = () => {
                 {chats && chats?.length > 0 ? (
                   <>
                     {chats?.map((room) => (
-                      <MessageCart key={room._id} room={room} />
+                      <MessageCart
+                        key={room._id}
+                        room={room}
+                        openPasswordModal={openPasswordModal}
+                      />
                     ))}
                   </>
                 ) : (
@@ -88,15 +120,23 @@ const HomeScreen = () => {
           </View>
         </ScrollView>
       </SafeAreaView>
+      {selectedRoom && (
+        <PasswordModal
+          isVisible={isPasswordModalVisible}
+          onClose={closePasswordModal}
+          onJoin={handleJoinChat}
+          onChangePassword={setPassword}
+        />
+      )}
     </View>
   );
 };
 
-const MessageCart = ({ room }) => {
+const MessageCart = ({ room, openPasswordModal }) => {
   const navigation = useNavigation();
   return (
     <TouchableOpacity
-      onPress={() => navigation.navigate("ChatScreen", { room: room })}
+      onPress={() => openPasswordModal(room)}
       className="w-full flex-row items-center justify-start py-2"
     >
       {/* Images  sau này muốn thay thế ảnh thì làm ở phần này*/}
@@ -115,6 +155,46 @@ const MessageCart = ({ room }) => {
       {/* Time text */}
       <Text className="text-primary px-4 text-base font-semibold">7 min</Text>
     </TouchableOpacity>
+  );
+};
+
+const PasswordModal = ({ isVisible, onClose, onJoin, onChangePassword }) => {
+  return (
+    <Modal animationType="slide" transparent={true} visible={isVisible}>
+      <View className="flex-1 items-center justify-center">
+        <View
+          className="p-5  bg-white rounded-2xl"
+          style={{
+            width: "80%",
+            elevation: 5,
+          }}
+        >
+          <Text className="text-primaryText text-sm mb-2">
+            Enter Chat Password
+          </Text>
+          <TextInput
+            className=" border border-inherit p-2 mb-2 rounded-xl"
+            placeholder="Password"
+            secureTextEntry
+            onChangeText={onChangePassword}
+          />
+          <View className="flex-row justify-between">
+            <TouchableOpacity
+              onPress={onClose}
+              className="w-20 h-10 bg-red-500 items-center flex justify-center rounded-2xl"
+            >
+              <Text className="text-white">Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onJoin}
+              className="w-20 h-10 bg-primary items-center flex justify-center rounded-2xl"
+            >
+              <Text className="text-white">Join</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 };
 
