@@ -12,7 +12,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { firebaseAuth } from "../config/firebase.config";
 import { SET_USER_NULL } from "../context/actions/userAction";
 
-const profileScreen = () => {
+const ProfileScreen = () => {
   const navigation = useNavigation();
   const user = useSelector((state) => state.user.user);
   const dispatch = useDispatch();
@@ -181,4 +181,4 @@ const profileScreen = () => {
   );
 };
 
-export default profileScreen;
+export default ProfileScreen;

@@ -1,7 +1,8 @@
-export {default as HomeScreen} from './HomeScreen'
-export {default as LgoinScreen} from './LgoinScreen'
-export {default as SignUpScreen} from './SignUpScreen'
-export {default as SplashScreen} from './SplashScreen'
-export {default as AddToChatScreen} from './AddToChatScreen'
-export {default as ChatScreen} from './ChatScreen'
-export {default as profileScreen} from './profileScreen'
+export { default as HomeScreen } from "./HomeScreen";
+export { default as LgoinScreen } from "./LgoinScreen";
+export { default as SignUpScreen } from "./SignUpScreen";
+export { default as SplashScreen } from "./SplashScreen";
+export { default as AddToChatScreen } from "./AddToChatScreen";
+export { default as ChatScreen } from "./ChatScreen";
+export { default as ProfileScreen } from "./ProfileScreen";
+export { default as ForgotPassword } from "./ForgotPassword";

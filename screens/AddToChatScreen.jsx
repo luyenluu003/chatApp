@@ -11,6 +11,7 @@ const AddToChatScreen = () => {
   const user = useSelector((state) => state.user.user);
   const [addChat, setAddChat] = useState("");
   const [password, setPassword] = useState("");
+  const [title, setTitle] = useState("");
   const createNewChat = async () => {
     let id = `${Date.now()}`;
     const _doc = {
@@ -18,6 +19,7 @@ const AddToChatScreen = () => {
       user: user,
       chatName: addChat,
       password: password,
+      title: title,
     };
 
     if (addChat !== "") {
@@ -84,6 +86,25 @@ const AddToChatScreen = () => {
               placeholderTextColor={"#999"}
               value={password}
               onChangeText={(text) => setPassword(text)}
+            />
+            {/* Icon */}
+          </View>
+
+          <View className="w-full px-4 mt-5 flex-row items-center justify-between py-3 rounded-xl border border-gray-200 space-x-3">
+            {/* Icons */}
+            <Ionicons
+              name="chatbubble-ellipses-outline"
+              size={24}
+              color={"#777"}
+            />
+
+            {/* Text input */}
+            <TextInput
+              className="flex-1 text-lg text-primaryText -mt-1 h-12 w-full"
+              placeholder="Create title"
+              placeholderTextColor={"#999"}
+              value={title}
+              onChangeText={(text) => setTitle(text)}
             />
             {/* Icon */}
           </View>

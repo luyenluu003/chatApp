@@ -15,9 +15,17 @@ import { useSelector } from "react-redux";
 import { Logo } from "../assets";
 import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { firestoreDB } from "../config/firebase.config";
-
+import {
+  addDoc,
+  collection,
+  where,
+  doc,
+  query,
+  getDocs,
+  orderBy,
+  onSnapshot,
+} from "firebase/firestore";
 const HomeScreen = () => {
   const user = useSelector((state) => state.user.user);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,13 +46,31 @@ const HomeScreen = () => {
       setIsLoading(false);
     });
 
-    // Return the unsubcribe funciton to stop listening to the updates
     return unsubscribe;
   }, []);
 
-  const openPasswordModal = (room) => {
-    setSelectedRoom(room);
-    setIsPasswordModalVisible(true);
+  const openPasswordModal = async (room) => {
+    try {
+      // Tìm xem có người dùng trong danh sách Participants không
+      const participantQuery = query(
+        collection(firestoreDB, "chats", room._id, "Participants"),
+        where("id", "==", user._id)
+      );
+
+      const participantSnapshot = await getDocs(participantQuery);
+
+      if (!participantSnapshot.empty) {
+        // Người dùng đã có trong Participants, điều hướng vào phòng trực tiếp
+        navigation.navigate("ChatScreen", { room });
+      } else {
+        // Người dùng chưa có trong Participants, mở modal nhập mật khẩu
+        setSelectedRoom(room);
+        setIsPasswordModalVisible(true);
+      }
+    } catch (error) {
+      console.error("Lỗi khi kiểm tra Participants:", error);
+      // Xử lý lỗi nếu có
+    }
   };
 
   const closePasswordModal = () => {
@@ -53,73 +79,99 @@ const HomeScreen = () => {
     setPassword("");
   };
 
-  const handleJoinChat = () => {
+  const handleJoinChat = async () => {
     if (selectedRoom) {
       if (!selectedRoom.password || selectedRoom.password === password) {
-        navigation.navigate("ChatScreen", { room: selectedRoom });
-        closePasswordModal();
+        // Tạo một id mới cho collection Participants
+        const participantId = `${Date.now()}`;
+
+        // Tạo một document mới trong collection Participants
+        const participantDoc = {
+          _id: participantId,
+          id: user._id,
+        };
+
+        try {
+          // Thêm document mới vào collection Participants
+          await addDoc(
+            collection(
+              doc(firestoreDB, "chats", selectedRoom._id),
+              "Participants"
+            ),
+            participantDoc
+          );
+
+          // Tiến hành chuyển hướng và đóng modal
+          navigation.navigate("ChatScreen", { room: selectedRoom });
+          closePasswordModal();
+        } catch (err) {
+          console.error("Lỗi khi thêm người dùng vào phòng:", err);
+          alert("Có lỗi xảy ra khi tham gia phòng.");
+        }
       } else {
-        alert("Incorrect password");
+        alert("Mật khẩu không chính xác");
       }
     }
   };
 
   return (
     <View className="flex-1">
-      <SafeAreaView>
-        <View className="w-full flex-row items-center justify-between px-4 py-10">
-          <Image source={Logo} className="w-12 h-12" resizeMode="contain" />
-          <TouchableOpacity
-            onPress={() => navigation.navigate("profileScreen")}
-            className="w-12 h-12 rounded-full border border-primary flex items-center justify-center"
-          >
-            <Image
-              source={{ uri: user?.profilePic }}
-              className="w-full h-full"
-              resizeMode="cover"
-            />
-          </TouchableOpacity>
-        </View>
-        {/* Scrolling area */}
-        <ScrollView className="w-full px-4 pt-4">
-          <View className="w-full">
-            {/* Message title */}
-            <View className="w-full flex-row items-center justify-between px-2">
-              <Text className="text-primaryText text-base font-extrabold pb-2">
-                Messages
-              </Text>
-              <TouchableOpacity
-                onPress={() => navigation.navigate("AddToChatScreen")}
-              >
-                <Ionicons name="chatbox" size={28} color="#555" />
-              </TouchableOpacity>
-            </View>
-            {isLoading ? (
-              <>
-                <View className="w-full flex items-center justify-center">
-                  <ActivityIndicator size={"large"} color={"#43C651"} />
-                </View>
-              </>
-            ) : (
-              <>
-                {chats && chats?.length > 0 ? (
-                  <>
-                    {chats?.map((room) => (
-                      <MessageCart
-                        key={room._id}
-                        room={room}
-                        openPasswordModal={openPasswordModal}
-                      />
-                    ))}
-                  </>
-                ) : (
-                  <></>
-                )}
-              </>
-            )}
+      <ScrollView>
+        <SafeAreaView>
+          <View className="w-full flex-row items-center justify-between px-4 py-10">
+            <Image source={Logo} className="w-12 h-12" resizeMode="contain" />
+            <TouchableOpacity
+              onPress={() => navigation.navigate("ProfileScreen")}
+              className="w-12 h-12 rounded-full border border-primary flex items-center justify-center"
+            >
+              <Image
+                source={{ uri: user?.profilePic }}
+                className="w-full h-full"
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
           </View>
-        </ScrollView>
-      </SafeAreaView>
+          {/* Scrolling area */}
+          <ScrollView className="w-full px-4 pt-4">
+            <View className="w-full">
+              {/* Message title */}
+              <View className="w-full flex-row items-center justify-between px-2">
+                <Text className="text-primaryText text-base font-extrabold pb-2">
+                  Messages
+                </Text>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate("AddToChatScreen")}
+                >
+                  <Ionicons name="chatbox" size={28} color="#555" />
+                </TouchableOpacity>
+              </View>
+              {isLoading ? (
+                <>
+                  <View className="w-full flex items-center justify-center">
+                    <ActivityIndicator size={"large"} color={"#43C651"} />
+                  </View>
+                </>
+              ) : (
+                <>
+                  {chats && chats?.length > 0 ? (
+                    <>
+                      {chats?.map((room) => (
+                        <MessageCart
+                          key={room._id}
+                          room={room}
+                          openPasswordModal={openPasswordModal}
+                        />
+                      ))}
+                    </>
+                  ) : (
+                    <></>
+                  )}
+                </>
+              )}
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </ScrollView>
       {selectedRoom && (
         <PasswordModal
           isVisible={isPasswordModalVisible}
@@ -148,9 +200,7 @@ const MessageCart = ({ room, openPasswordModal }) => {
         <Text className="text-[#333] text-base font-semibold capitalize">
           {room.chatName}
         </Text>
-        <Text className="text-primaryText text-sm">
-          Nơi hội tụ của tinh hoa thế giới chứa sự vĩ đại của miku
-        </Text>
+        <Text className="text-primaryText text-sm">{room.title}</Text>
       </View>
       {/* Time text */}
       <Text className="text-primary px-4 text-base font-semibold">7 min</Text>

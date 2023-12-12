@@ -1,4 +1,11 @@
-import { View, Text, Image, Dimensions, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  Dimensions,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
 import React, { useState } from "react";
 import { BGImage, Logo } from "../assets";
 import { UserTextInput } from "../components";
@@ -113,6 +120,13 @@ const LgoinScreen = () => {
               </Text>
             </TouchableOpacity>
           </View>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("ForgotPassword")}
+          >
+            <Text className="text-base font-semibold bottom-5 text-primaryBold">
+              Forgot password ?
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     </View>

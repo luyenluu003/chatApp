@@ -8,7 +8,8 @@ import {
   TextInput,
   Image,
 } from "react-native";
-import React, { useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import * as ImagePicker from "expo-image-picker";
 import {
   Entypo,
   FontAwesome,
@@ -36,20 +37,18 @@ const ChatScreen = ({ route }) => {
   const textInputRef = useRef(null);
   const [messages, setMessages] = useState(null);
   const user = useSelector((state) => state.user.user);
-
   const [recording, setRecording] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [roomHash, setRoomHash] = useState();
 
   const handleKeyBoardOpen = () => {
-    // Chưa làm được bấm vào hiển thị bàn phím chứa icon
     if (textInputRef.current) {
       textInputRef.current.focus();
     }
   };
-  
-  const handleMic = () => {
+  const scrollViewRef = useRef();
 
-  }
+  const handleMic = () => {};
 
   const sendMessage = async () => {
     const timeStamp = serverTimestamp();
@@ -61,13 +60,18 @@ const ChatScreen = ({ route }) => {
       message: message,
       user: user,
     };
+
     setMessage("");
-    await addDoc(
-      collection(doc(firestoreDB, "chats", room._id), "messages"),
-      _doc
-    )
-      .then(() => {})
-      .catch((err) => alert(err));
+
+    try {
+      await addDoc(
+        collection(doc(firestoreDB, "chats", room._id), "messages"),
+        _doc
+      );
+    } catch (err) {
+      console.error("Error adding message to Firestore:", err);
+      alert(err);
+    }
   };
 
   useLayoutEffect(() => {
@@ -82,6 +86,66 @@ const ChatScreen = ({ route }) => {
     });
     return unsubcribe;
   }, []);
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.cancelled) {
+      console.log("result:", result);
+      return result;
+    }
+
+    return null;
+  };
+
+  const handleCamera = async () => {
+    try {
+      const result = await pickImage();
+
+      if (result && !result.cancelled) {
+        console.log("Image URI:", result.assets[0].uri); // In giá trị đường dẫn ảnh đã chọn
+        await sendImage(result.assets[0].uri);
+      } else {
+        console.log("User cancelled image selection or encountered an error");
+      }
+    } catch (error) {
+      console.error("Error picking image:", error);
+    }
+  };
+
+  const sendImage = async (url) => {
+    if (url === null || url === undefined) {
+      console.error("Invalid image URL");
+      return;
+    }
+
+    const timeStamp = serverTimestamp();
+    const id = `${Date.now()}`;
+    const _doc = {
+      _id: id,
+      roomId: room._id,
+      timeStamp: timeStamp,
+      message: "",
+      user: user,
+      image: url,
+    };
+
+    setMessage("");
+    try {
+      await addDoc(
+        collection(doc(firestoreDB, "chats", room._id), "messages"),
+        _doc
+      );
+    } catch (err) {
+      console.error("Error adding message to Firestore:", err);
+      alert(err);
+    }
+  };
 
   return (
     <View className="flex-1">
@@ -131,7 +195,13 @@ const ChatScreen = ({ route }) => {
           keyboardVerticalOffset={160}
         >
           <>
-            <ScrollView>
+            <ScrollView
+              ref={scrollViewRef}
+              onContentSizeChange={() =>
+                scrollViewRef.current.scrollToEnd({ animated: true })
+              }
+              keyboardShouldPersistTaps="handled"
+            >
               {isLoading ? (
                 <>
                   <View className="w-full flex items-center justify-center">
@@ -148,9 +218,23 @@ const ChatScreen = ({ route }) => {
                           style={{ alignSelf: "flex-end" }}
                           className="px-4 py-4 rounded-tl-2xl rounded-tr-2xl bg-primary w-auto relative"
                         >
-                          <Text className="text-base font-semibold text-white">
-                            {msg.message}
-                          </Text>
+                          {msg.image ? (
+                            // Hiển thị hình ảnh nếu tin nhắn có chứa hình ảnh
+                            <Image
+                              style={{
+                                width: 200,
+                                height: 200,
+                                borderRadius: 10,
+                              }}
+                              source={{ uri: msg.image }}
+                              resizeMode="cover"
+                            />
+                          ) : (
+                            // Hiển thị nội dung văn bản nếu không có hình ảnh
+                            <Text className="text-base font-semibold text-white">
+                              {msg.message}
+                            </Text>
+                          )}
                         </View>
                         <View style={{ alignSelf: "flex-end" }}>
                           {msg.timeStamp?.seconds && (
@@ -183,9 +267,23 @@ const ChatScreen = ({ route }) => {
                           {/* Text */}
                           <View className="m-1">
                             <View className="px-4 py-4 rounded-tl-2xl rounded-tr-2xl bg-gray-200 w-auto relative">
-                              <Text className="text-base font-semibold text-black">
-                                {msg.message}
-                              </Text>
+                              {msg.image ? (
+                                // Hiển thị hình ảnh nếu tin nhắn có chứa hình ảnh
+                                <Image
+                                  style={{
+                                    width: 200,
+                                    height: 200,
+                                    borderRadius: 10,
+                                  }}
+                                  source={{ uri: msg.image }}
+                                  resizeMode="cover"
+                                />
+                              ) : (
+                                // Hiển thị nội dung văn bản nếu không có hình ảnh
+                                <Text className="text-base font-semibold text-black">
+                                  {msg.message}
+                                </Text>
+                              )}
                             </View>
                             <View style={{ alignSelf: "flex-start" }}>
                               {msg.timeStamp?.seconds && (
@@ -210,6 +308,14 @@ const ChatScreen = ({ route }) => {
             </ScrollView>
             <View className="w-full flex-row items-center justify-center px-8">
               <View className="bg-gray-200 rounded-2xl px-4 space-x-4 py-2 flex-row items-center justify-center">
+                <TouchableOpacity>
+                  <Entypo
+                    name="camera"
+                    onPress={handleCamera}
+                    size={24}
+                    color={"#555"}
+                  />
+                </TouchableOpacity>
                 <TouchableOpacity onPress={handleKeyBoardOpen}>
                   <Entypo name="emoji-happy" size={24} color={"#555"} />
                 </TouchableOpacity>
