@@ -70,7 +70,6 @@ const ChatScreen = ({ route }) => {
       );
     } catch (err) {
       console.error("Error adding message to Firestore:", err);
-      alert(err);
     }
   };
 
@@ -111,11 +110,8 @@ const ChatScreen = ({ route }) => {
         console.log("Image URI:", result.assets[0].uri); // In giá trị đường dẫn ảnh đã chọn
         await sendImage(result.assets[0].uri);
       } else {
-        console.log("User cancelled image selection or encountered an error");
       }
-    } catch (error) {
-      console.error("Error picking image:", error);
-    }
+    } catch (error) {}
   };
 
   const sendImage = async (url) => {
@@ -143,7 +139,6 @@ const ChatScreen = ({ route }) => {
       );
     } catch (err) {
       console.error("Error adding message to Firestore:", err);
-      alert(err);
     }
   };
 
